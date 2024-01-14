@@ -36,10 +36,5 @@ fun main () = let val table = ParseToml.parse (ValidateUtf8.validatingReader Tex
               in print (dumpTable table ^ "\n")
               end;
 fun fail s = (TextIO.output (TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
-val () = main () handle ParseToml.UnexpectedEndOfInput => fail "unexpected end of input"
-                      | ParseToml.UnknownEscapeChar => fail "unknown escape char"
-                      | ParseToml.InvalidString => fail "invalid string"
-                      | ParseToml.UnexpectedChar => fail "unexpected char"
-                      | ParseToml.InvalidNumber => fail "invalid number"
-                      | ParseToml.InvalidDateTime => fail "invalid date/time"
-                      | ParseToml.DuplicateKey _ => fail "duplicate key";
+val () = main () handle TomlParseError.ParseError e => fail (TomlParseError.toString e)
+                      | ValidateUtf8.InvalidUtf8 => fail "invalid UTF-8";
