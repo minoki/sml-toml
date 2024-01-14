@@ -21,8 +21,8 @@ structure Common = struct
   fun digitToInt c = Char.ord c - Char.ord #"0"
 end
 signature PARSE_TOML = sig
-  type value = TomlValue.value
-  type table = (string * TomlValue.value) list
+  type value
+  type table
   type path = string list
   exception UnexpectedEndOfInput
   exception UnknownEscapeChar
@@ -33,11 +33,13 @@ signature PARSE_TOML = sig
   exception DuplicateKey of path
   val parse : (char, 'strm) StringCvt.reader -> 'strm -> table
 end
-structure ParseToml :> PARSE_TOML = struct
+functor ParseToml (Handler : TOML_VALUE_HANDLER) :> PARSE_TOML
+                                                    where type value = Handler.value
+                                                    where type table = Handler.table = struct
   open Common
   val implodeRev = StringExt.implodeRev
-  type value = TomlValue.value
-  type table = (string * value) list
+  type value = Handler.value
+  type table = Handler.table
   (*: val parse : (char, 'strm) StringCvt.reader -> 'strm -> table *)
   fun parse (getc : (char, 'strm) StringCvt.reader)
     = let (*: val expect : char * 'strm -> 'strm *)
@@ -279,53 +281,53 @@ structure ParseToml :> PARSE_TOML = struct
             (*: val readMultilineLiteralString : 'strm -> string * 'strm *)
             fun readMultilineLiteralString strm = go ([], strm)
           end
-          (*: val readHexInt : IntInf.int * 'strm -> IntInf.int * 'strm *)
-          fun readHexInt (accum : IntInf.int, strm) = case getc strm of
-                                                          NONE => raise UnexpectedEndOfInput
-                                                        | SOME (c, strm') => if #"0" <= c andalso c <= #"9" then
-                                                                                 readHexIntUnderscore (accum * 16 + IntInf.fromInt (digitToInt c), strm')
-                                                                             else if #"A" <= c andalso c <= #"F" then
-                                                                                 readHexIntUnderscore (accum * 16 + IntInf.fromInt (Char.ord c - (Char.ord #"A" - 10)), strm')
-                                                                             else if #"a" <= c andalso c <= #"f" then
-                                                                                 readHexIntUnderscore (accum * 16 + IntInf.fromInt (Char.ord c - (Char.ord #"a" - 10)), strm')
-                                                                             else
-                                                                                 raise UnexpectedChar
+          (*: val readHexInt : Handler.Integer.int * 'strm -> Handler.Integer.int * 'strm *)
+          fun readHexInt (accum, strm) = case getc strm of
+                                             NONE => raise UnexpectedEndOfInput
+                                           | SOME (c, strm') => if #"0" <= c andalso c <= #"9" then
+                                                                    readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (digitToInt c)), strm')
+                                                                else if #"A" <= c andalso c <= #"F" then
+                                                                    readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (Char.ord c - (Char.ord #"A" - 10))), strm')
+                                                                else if #"a" <= c andalso c <= #"f" then
+                                                                    readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (Char.ord c - (Char.ord #"a" - 10))), strm')
+                                                                else
+                                                                    raise UnexpectedChar
           and readHexIntUnderscore (accum, strm) = case getc strm of
                                                        NONE => (accum, strm)
                                                      | SOME (#"_", strm') => readHexInt (accum, strm') (* the next character must be a hex digit *)
                                                      | SOME (c, strm') => if #"0" <= c andalso c <= #"9" then
-                                                                              readHexIntUnderscore (accum * 16 + IntInf.fromInt (digitToInt c), strm')
+                                                                              readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (digitToInt c)), strm')
                                                                           else if #"A" <= c andalso c <= #"F" then
-                                                                              readHexIntUnderscore (accum * 16 + IntInf.fromInt (Char.ord c - (Char.ord #"A" - 10)), strm')
+                                                                              readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (Char.ord c - (Char.ord #"A" - 10))), strm')
                                                                           else if #"a" <= c andalso c <= #"f" then
-                                                                              readHexIntUnderscore (accum * 16 + IntInf.fromInt (Char.ord c - (Char.ord #"a" - 10)), strm')
+                                                                              readHexIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 16), Handler.Integer.fromInt (Char.ord c - (Char.ord #"a" - 10))), strm')
                                                                           else
                                                                               (accum, strm)
-          (*: val readOctInt : IntInf.int * 'strm -> IntInf.int * 'strm *)
-          fun readOctInt (accum : IntInf.int, strm) = case getc strm of
-                                                          NONE => raise UnexpectedEndOfInput
-                                                        | SOME (c, strm') => if #"0" <= c andalso c <= #"7" then
-                                                                                 readOctIntUnderscore (accum * 8 + IntInf.fromInt (digitToInt c), strm')
-                                                                             else
-                                                                                 raise UnexpectedChar
+          (*: val readOctInt : Handler.Integer.int * 'strm -> Handler.Integer.int * 'strm *)
+          fun readOctInt (accum, strm) = case getc strm of
+                                             NONE => raise UnexpectedEndOfInput
+                                           | SOME (c, strm') => if #"0" <= c andalso c <= #"7" then
+                                                                    readOctIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 8), Handler.Integer.fromInt (digitToInt c)), strm')
+                                                                else
+                                                                    raise UnexpectedChar
           and readOctIntUnderscore (accum, strm) = case getc strm of
                                                        NONE => (accum, strm)
                                                      | SOME (#"_", strm') => readOctInt (accum, strm') (* the next character must be a oct digit *)
                                                      | SOME (c, strm') => if #"0" <= c andalso c <= #"7" then
-                                                                              readOctIntUnderscore (accum * 8 + IntInf.fromInt (digitToInt c), strm')
+                                                                              readOctIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 8), Handler.Integer.fromInt (digitToInt c)), strm')
                                                                           else
                                                                               (accum, strm)
-          (*: val readBinInt : IntInf.int * 'strm -> IntInf.int * 'strm *)
-          fun readBinInt (accum : IntInf.int, strm) = case getc strm of
-                                                          NONE => raise UnexpectedEndOfInput
-                                                        | SOME (#"0", strm') => readBinIntUnderscore (accum * 2, strm')
-                                                        | SOME (#"1", strm') => readBinIntUnderscore (accum * 2 + 1, strm')
-                                                        | SOME (_, _) => raise UnexpectedChar
+          (*: val readBinInt : Handler.Integer.int * 'strm -> Handler.Integer.int * 'strm *)
+          fun readBinInt (accum, strm) = case getc strm of
+                                             NONE => raise UnexpectedEndOfInput
+                                           | SOME (#"0", strm') => readBinIntUnderscore (Handler.Integer.* (accum, Handler.Integer.fromInt 2), strm')
+                                           | SOME (#"1", strm') => readBinIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 2), Handler.Integer.fromInt 1), strm')
+                                           | SOME (_, _) => raise UnexpectedChar
           and readBinIntUnderscore (accum, strm) = case getc strm of
                                                        NONE => (accum, strm)
                                                      | SOME (#"_", strm') => readBinInt (accum, strm') (* the next character must be a bin digit *)
-                                                     | SOME (#"0", strm') => readBinIntUnderscore (accum * 2, strm')
-                                                     | SOME (#"1", strm') => readBinIntUnderscore (accum * 2 + 1, strm')
+                                                     | SOME (#"0", strm') => readBinIntUnderscore (Handler.Integer.* (accum, Handler.Integer.fromInt 2), strm')
+                                                     | SOME (#"1", strm') => readBinIntUnderscore (Handler.Integer.+ (Handler.Integer.* (accum, Handler.Integer.fromInt 2), Handler.Integer.fromInt 1), strm')
                                                      | SOME (_, _) => (accum, strm)
           (*: val readDecInt : char list * bool * 'strm -> char list * bool * 'strm *)
           fun readDecInt (accum, hadUnderscore, strm) = case getc strm of
@@ -350,9 +352,9 @@ structure ParseToml :> PARSE_TOML = struct
                                                                                                              readDecIntUnderscore (c :: e :: accum', false, strm''')
                                                                                                          else
                                                                                                              raise UnexpectedChar
-                                                in (TomlValue.FLOAT (implodeRev accum''), strm''')
+                                                in (Handler.float (implodeRev accum''), strm''')
                                                 end
-          (*: val readSigned : char list * 'strm -> value * 'strm *) (* dec-int / float *)
+          (*: val readSigned : char * char * 'strm -> value * 'strm *) (* dec-int / float *)
           fun readSigned (sign, d0, strm) = let val (accum, _, strm') = readDecIntUnderscore ([d0, sign], false, strm)
                                                 fun checkPrefixZero () = case accum of
                                                                             [_, _] => ()
@@ -367,11 +369,11 @@ structure ParseToml :> PARSE_TOML = struct
                                                                           in case getc strm''' of
                                                                                  SOME (#"e", strm'''') => readExpPart (accum', #"e", strm'''')
                                                                                | SOME (#"E", strm'''') => readExpPart (accum', #"E", strm'''')
-                                                                               | _ => (TomlValue.FLOAT (implodeRev accum'), strm''')
+                                                                               | _ => (Handler.float (implodeRev accum'), strm''')
                                                                           end
                                                  | SOME (#"e", strm'') => (checkPrefixZero (); readExpPart (accum, #"e", strm'')) (* float *)
                                                  | SOME (#"E", strm'') => (checkPrefixZero (); readExpPart (accum, #"E", strm'')) (* float *)
-                                                 | _ => (checkPrefixZero (); (TomlValue.INTEGER (Option.valOf (IntInf.fromString (implodeRev accum))), strm')) (* dec-int *)
+                                                 | _ => (checkPrefixZero (); (Handler.integer (Option.valOf (Handler.Integer.fromString (implodeRev accum))), strm')) (* dec-int *)
                                             end
           fun readTwoDigit (accum, strm) = case getc strm of
                                                NONE => raise UnexpectedEndOfInput
@@ -412,8 +414,8 @@ structure ParseToml :> PARSE_TOML = struct
                                                             raise InvalidDateTime
                                                val (accum'', strm'') = readMinSec (#":" :: accum', expect (#":", strm'))
                                            in case getc strm'' of
-                                                  SOME (#"Z", strm''') => (TomlValue.DATETIME (implodeRev (#"Z" :: accum'')), strm''') (* offset-date-time *)
-                                                | SOME (#"z", strm''') => (TomlValue.DATETIME (implodeRev (#"z" :: accum'')), strm''') (* offset-date-time *)
+                                                  SOME (#"Z", strm''') => (Handler.datetime (implodeRev (#"Z" :: accum'')), strm''') (* offset-date-time *)
+                                                | SOME (#"z", strm''') => (Handler.datetime (implodeRev (#"z" :: accum'')), strm''') (* offset-date-time *)
                                                 | SOME (#"+", strm''') => let val (accum''', offsetHour, strm'''') = readTwoDigit (#"+" :: accum'', strm''') (* offset-date-time *)
                                                                               val strm''''' = expect (#":", strm'''')
                                                                               val (accum'''', offsetMin, strm'''''') = readTwoDigit (#":" :: accum''', strm''''')
@@ -421,7 +423,7 @@ structure ParseToml :> PARSE_TOML = struct
                                                                                            ()
                                                                                        else
                                                                                            raise InvalidDateTime
-                                                                          in (TomlValue.DATETIME (implodeRev accum''''), strm'''''')
+                                                                          in (Handler.datetime (implodeRev accum''''), strm'''''')
                                                                           end
                                                 | SOME (#"-", strm''') => let val (accum''', offsetHour, strm'''') = readTwoDigit (#"-" :: accum'', strm''') (* offset-date-time *)
                                                                               val strm''''' = expect (#":", strm'''')
@@ -430,9 +432,9 @@ structure ParseToml :> PARSE_TOML = struct
                                                                                            ()
                                                                                        else
                                                                                            raise InvalidDateTime
-                                                                          in (TomlValue.DATETIME (implodeRev accum''''), strm'''''')
+                                                                          in (Handler.datetime (implodeRev accum''''), strm'''''')
                                                                           end
-                                                | _ => (TomlValue.LOCAL_DATETIME (implodeRev accum''), strm'') (* local-date-time *)
+                                                | _ => (Handler.localDatetime (implodeRev accum''), strm'') (* local-date-time *)
                                            end
           fun isValidDate (_, 1, mday) = 1 <= mday andalso mday <= 31
             | isValidDate (year, 2, 29) = Int.rem (year, 4) = 0 andalso (Int.rem (year, 100) <> 0 orelse Int.rem (year, 400) = 0)
@@ -463,10 +465,10 @@ structure ParseToml :> PARSE_TOML = struct
                                                                                   SOME (c, _) => if Char.isDigit c then
                                                                                                      readTimePart (#"T" :: accum'', strm'''') (* offset-date-time / local-date-time *)
                                                                                                  else
-                                                                                                     (TomlValue.DATE (implodeRev accum''), strm''') (* local-date *)
-                                                                                | _ => (TomlValue.DATE (implodeRev accum''), strm''') (* local-date *)
+                                                                                                     (Handler.date (implodeRev accum''), strm''') (* local-date *)
+                                                                                | _ => (Handler.date (implodeRev accum''), strm''') (* local-date *)
                                                                              )
-                                                  | _ => (TomlValue.DATE (implodeRev accum''), strm''') (* local-date *)
+                                                  | _ => (Handler.date (implodeRev accum''), strm''') (* local-date *)
                                              end
           (*: val readUnsigned : char * 'strm -> value * 'strm *) (* dec-int / float / date-time / date / time *)
           fun readUnsigned (d0, strm) = let val (revDigits, hadUnderscore, strm') = readDecIntUnderscore ([d0], false, strm)
@@ -482,18 +484,18 @@ structure ParseToml :> PARSE_TOML = struct
                                                in readDate (#"-" :: revDigits, year, strm'')
                                                end
                                              | ([_, _], false, SOME (#":", strm'')) => let val (accum, strm''') = readMinSec (#":" :: revDigits, strm'') (* partial-time *)
-                                                                                       in (TomlValue.TIME (implodeRev accum), strm''')
+                                                                                       in (Handler.time (implodeRev accum), strm''')
                                                                                        end
                                              | (_, _, SOME (#".", strm'')) => let val () = checkPrefixZero () (* float *)
                                                                                   val (accum, _, strm''') = readDecInt (#"." :: revDigits, false, strm'')
                                                                               in case getc strm''' of
                                                                                      SOME (#"e", strm'''') => readExpPart (accum, #"e", strm'''')
                                                                                    | SOME (#"E", strm'''') => readExpPart (accum, #"E", strm'''')
-                                                                                   | _ => (TomlValue.FLOAT (implodeRev accum), strm''')
+                                                                                   | _ => (Handler.float (implodeRev accum), strm''')
                                                                               end
                                              | (_, _, SOME (#"e", strm'')) => (checkPrefixZero (); readExpPart (revDigits, #"e", strm'')) (* float *)
                                              | (_, _, SOME (#"E", strm'')) => (checkPrefixZero (); readExpPart (revDigits, #"E", strm'')) (* float *)
-                                             | (_, _, _) => (checkPrefixZero (); (TomlValue.INTEGER (Option.valOf (IntInf.fromString (implodeRev revDigits))), strm')) (* dec-int *)
+                                             | (_, _, _) => (checkPrefixZero (); (Handler.integer (Option.valOf (Handler.Integer.fromString (implodeRev revDigits))), strm')) (* dec-int *)
                                         end
           fun isValidUnquotedKey c = Char.isAlphaNum c orelse c = #"-" orelse c = #"_"
           (*: val readSimpleKey : (char * 'strm) option -> string * 'strm *)
@@ -531,11 +533,11 @@ structure ParseToml :> PARSE_TOML = struct
           val finalizeValue : partial_value -> value
           val finalizeTable : partial_table -> table
           *)
-          fun finalize xs = TomlValue.TABLE (finalizeTable xs)
+          fun finalize xs = Handler.subtable (finalizeTable xs)
           and finalizeValue (LEAF v) = v
             | finalizeValue (PARTIAL_TABLE (_, pt)) = finalize pt
-            | finalizeValue (PARTIAL_ARRAY (last, xs)) = TomlValue.ARRAY (List.revAppend (List.map finalize xs, [finalize last]))
-          and finalizeTable xs = List.map (fn (key, pv) => (key, finalizeValue pv)) xs
+            | finalizeValue (PARTIAL_ARRAY (last, xs)) = Handler.array (List.revAppend (List.map finalize xs, [finalize last]))
+          and finalizeTable xs = Handler.table (List.map (fn (key, pv) => (key, finalizeValue pv)) xs)
           (*: val insert : path * partial_table * key * value -> partial_table *)
           fun insert (revPath, pt, keys as [key], v) = if List.exists (fn (key', _) => key = key') pt then
                                                            raise DuplicateKey (List.revAppend (revPath, keys))
@@ -558,9 +560,9 @@ structure ParseToml :> PARSE_TOML = struct
             | insert (_, _, [], _) = raise Match (* should not occur *)
           (*:
           val readValue : path * (char * 'strm) option -> value * 'strm
-          val readArray : value list * 'strm -> value * 'strm
-          val readInlineTable : value list * 'strm -> value * 'strm
-          val readKeyval : (char * 'strm) option -> string list * value * 'strm
+          val readArray : path * value list * 'strm -> value * 'strm
+          val readInlineTable : path * partial_table * (char * 'strm) option -> value * 'strm
+          val readKeyval : path * (char * 'strm) option -> string list * value * 'strm
           *)
           fun readValue (_, NONE) = raise UnexpectedEndOfInput
             | readValue (revPath, SOME (c, strm))
@@ -570,12 +572,12 @@ structure ParseToml :> PARSE_TOML = struct
                                   | SOME (#"\"", strm') =>
                                     (case getc strm' of
                                          SOME (#"\"", strm'') => let val (s, strm''') = readMultilineBasicString (skipOptionalNewline strm'')
-                                                                 in (TomlValue.STRING s, strm''')
+                                                                 in (Handler.string s, strm''')
                                                                  end
-                                       | _ => (TomlValue.STRING "", strm')
+                                       | _ => (Handler.string "", strm')
                                     )
                                   | _ => let val (s, strm') = readBasicString strm
-                                         in (TomlValue.STRING s, strm')
+                                         in (Handler.string s, strm')
                                          end
                                )
                     | #"'" => (case getc strm of (* ml-literal-string / literal-string *)
@@ -583,27 +585,27 @@ structure ParseToml :> PARSE_TOML = struct
                                  | SOME (#"'", strm') =>
                                    (case getc strm' of
                                         SOME (#"'", strm'') => let val (s, strm''') = readMultilineLiteralString (skipOptionalNewline strm'')
-                                                               in (TomlValue.STRING s, strm''')
+                                                               in (Handler.string s, strm''')
                                                                end
-                                      | _ => (TomlValue.STRING "", strm')
+                                      | _ => (Handler.string "", strm')
                                    )
                                  | _ => let val (s, strm') = readLiteralString strm
-                                        in (TomlValue.STRING s, strm')
+                                        in (Handler.string s, strm')
                                         end
                               )
                     | #"[" => readArray ("[]" :: revPath, [], strm) (* array *)
                     | #"{" => (case skipWhiteSpaceAndGetc strm of (* inline-table *)
-                                   SOME (#"}", strm') => (TomlValue.TABLE [], strm')
+                                   SOME (#"}", strm') => (Handler.subtable (Handler.table []), strm')
                                  | r => readInlineTable (revPath, [], r)
                               )
-                    | #"t" => (TomlValue.BOOLEAN true, expect (#"e", expect (#"u", expect (#"r", strm))))
-                    | #"f" => (TomlValue.BOOLEAN false, expect (#"e", expect (#"s", expect (#"l", expect (#"a", strm)))))
-                    | #"i" => (TomlValue.FLOAT "inf", expect (#"f", expect (#"n", strm)))
-                    | #"n" => (TomlValue.FLOAT "nan", expect (#"n", expect (#"a", strm)))
+                    | #"t" => (Handler.bool true, expect (#"e", expect (#"u", expect (#"r", strm))))
+                    | #"f" => (Handler.bool false, expect (#"e", expect (#"s", expect (#"l", expect (#"a", strm)))))
+                    | #"i" => (Handler.float "inf", expect (#"f", expect (#"n", strm)))
+                    | #"n" => (Handler.float "nan", expect (#"n", expect (#"a", strm)))
                     | #"+" => (case getc strm of
                                    NONE => raise UnexpectedEndOfInput
-                                 | SOME (#"i", strm') => (TomlValue.FLOAT "+inf", expect (#"f", expect (#"n", strm')))
-                                 | SOME (#"n", strm') => (TomlValue.FLOAT "+nan", expect (#"n", expect (#"a", strm')))
+                                 | SOME (#"i", strm') => (Handler.float "+inf", expect (#"f", expect (#"n", strm')))
+                                 | SOME (#"n", strm') => (Handler.float "+nan", expect (#"n", expect (#"a", strm')))
                                  | SOME (c', strm') => if Char.isDigit c' then
                                                            readSigned (#"+", c', strm') (* float / integer *)
                                                        else
@@ -611,23 +613,23 @@ structure ParseToml :> PARSE_TOML = struct
                               )
                     | #"-" => (case getc strm of
                                    NONE => raise UnexpectedEndOfInput
-                                 | SOME (#"i", strm') => (TomlValue.FLOAT "-inf", expect (#"f", expect (#"n", strm')))
-                                 | SOME (#"n", strm') => (TomlValue.FLOAT "-nan", expect (#"n", expect (#"a", strm')))
+                                 | SOME (#"i", strm') => (Handler.float "-inf", expect (#"f", expect (#"n", strm')))
+                                 | SOME (#"n", strm') => (Handler.float "-nan", expect (#"n", expect (#"a", strm')))
                                  | SOME (c', strm') => if Char.isDigit c' then
                                                            readSigned (#"-", c', strm') (* float / integer *)
                                                        else
                                                            raise UnexpectedChar
                               )
                     | #"0" => (case getc strm of
-                                   NONE => (TomlValue.INTEGER 0, strm)
-                                 | SOME (#"x", strm') => let val (x, strm'') = readHexInt (0, strm') (* hex-int *)
-                                                         in (TomlValue.INTEGER x, strm'')
+                                   NONE => (Handler.integer (Handler.Integer.fromInt 0), strm)
+                                 | SOME (#"x", strm') => let val (x, strm'') = readHexInt (Handler.Integer.fromInt 0, strm') (* hex-int *)
+                                                         in (Handler.integer x, strm'')
                                                          end
-                                 | SOME (#"o", strm') => let val (x, strm'') = readOctInt (0, strm') (* oct-int *)
-                                                         in (TomlValue.INTEGER x, strm'')
+                                 | SOME (#"o", strm') => let val (x, strm'') = readOctInt (Handler.Integer.fromInt 0, strm') (* oct-int *)
+                                                         in (Handler.integer x, strm'')
                                                          end
-                                 | SOME (#"b", strm') => let val (x, strm'') = readBinInt (0, strm') (* bin-int *)
-                                                         in (TomlValue.INTEGER x, strm'')
+                                 | SOME (#"b", strm') => let val (x, strm'') = readBinInt (Handler.Integer.fromInt 0, strm') (* bin-int *)
+                                                         in (Handler.integer x, strm'')
                                                          end
                                  | SOME (_, _) => readUnsigned (#"0", strm) (* date-time / float / unsigned-dec-int *)
                               )
@@ -636,12 +638,12 @@ structure ParseToml :> PARSE_TOML = struct
                            else
                                raise UnexpectedChar
           and readArray (revPath, accum, strm) = (case skipWhiteSpaceOrCommentOrNewlineAndGetc strm of
-                                                      SOME (#"]", strm') => (TomlValue.ARRAY (List.rev accum), strm')
+                                                      SOME (#"]", strm') => (Handler.array (List.rev accum), strm')
                                                     | r => let val (v, strm') = readValue (revPath, r)
                                                            in case skipWhiteSpaceOrCommentOrNewlineAndGetc strm' of
                                                                   NONE => raise UnexpectedEndOfInput
                                                                 | SOME (#",", strm'') => readArray (revPath, v :: accum, strm'')
-                                                                | SOME (#"]", strm'') => (TomlValue.ARRAY (List.rev (v :: accum)), strm'')
+                                                                | SOME (#"]", strm'') => (Handler.array (List.rev (v :: accum)), strm'')
                                                                 | SOME (_, _) => raise UnexpectedChar
                                                            end
                                                  )
@@ -657,7 +659,7 @@ structure ParseToml :> PARSE_TOML = struct
                                             val (v, strm'') = readValue (List.revAppend (key, revPath), skipWhiteSpaceAndGetc (expect (#"=", strm')))
                                         in (key, v, strm'')
                                         end
-          datatype expression = KEYVAL of key * TomlValue.value
+          datatype expression = KEYVAL of key * value
                               | STD_TABLE of key
                               | ARRAY_TABLE of key
           (*: val readExpression : string list * 'strm -> (expression * 'strm) option *)
