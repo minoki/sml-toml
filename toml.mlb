@@ -1,0 +1,14 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  src/value.sig
+  src/value.sml
+  src/validate_utf8.sml
+  src/parse_toml.sml
+in
+  signature TOML_VALUE
+  structure TomlValue
+  signature PARSE_TOML
+  structure ParseToml
+  signature VALIDATE_UTF8
+  structure ValidateUtf8
+end
