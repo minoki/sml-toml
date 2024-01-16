@@ -1,0 +1,25 @@
+on: [push, pull_request]
+name: ci
+jobs:
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-20.04 # 22.04 doesn't contain mlton
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install mlton
+          docker pull ghcr.io/minoki/lunarml:latest
+          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+          gzip -d toml-test-v1.4.0-linux-amd64.gz
+          mv toml-test-v1.4.0-linux-amd64 toml-test
+          chmod +x toml-test
+      - name: Type check
+        run: make typecheck
+      - name: Check type annotations
+        run: docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --default-ann "valDescInComments error" toml.mlb
+      - name: Test
+        run: |
+          make -C test decoder
+          ./toml-test test/decoder
