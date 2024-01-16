@@ -3,36 +3,44 @@
  * This file is part of sml-toml.
  * See LICENSE for copyright information.
  *)
-signature TOML_PARSE_ERROR = sig
-  datatype error = UNEXPECTED of { encountered : string, expected : string }
-                 | PREFIX_ZERO
-                 | INVALID_UNICODE_SCALAR
-                 | INVALID_DATE
-                 | INVALID_TIME
-                 | DUPLICATE_KEY of string list
-  val toString : error -> string
+signature TOML_PARSE_ERROR =
+sig
+  datatype error =
+    UNEXPECTED of {encountered: string, expected: string}
+  | PREFIX_ZERO
+  | INVALID_UNICODE_SCALAR
+  | INVALID_DATE
+  | INVALID_TIME
+  | DUPLICATE_KEY of string list
+  val toString: error -> string
   exception ParseError of error
 end
-structure TomlParseError :> TOML_PARSE_ERROR = struct
-  datatype error = UNEXPECTED of { encountered : string, expected : string }
-                 | PREFIX_ZERO
-                 | INVALID_UNICODE_SCALAR
-                 | INVALID_DATE
-                 | INVALID_TIME
-                 | DUPLICATE_KEY of string list
+structure TomlParseError :> TOML_PARSE_ERROR =
+struct
+  datatype error =
+    UNEXPECTED of {encountered: string, expected: string}
+  | PREFIX_ZERO
+  | INVALID_UNICODE_SCALAR
+  | INVALID_DATE
+  | INVALID_TIME
+  | DUPLICATE_KEY of string list
   local
     fun prettyKey "" = "\"\""
-      | prettyKey s = if CharVector.all (fn c => Char.isAlphaNum c orelse c = #"-" orelse c = #"_") s then
-                          s
-                      else
-                          "\"" ^ s ^ "\""
+      | prettyKey s =
+          if
+            CharVector.all
+              (fn c => Char.isAlphaNum c orelse c = #"-" orelse c = #"_") s
+          then s
+          else "\"" ^ s ^ "\""
   in
-    fun toString (UNEXPECTED { encountered, expected }) = "unexpected " ^ encountered ^ ", expected " ^ expected
+    fun toString (UNEXPECTED {encountered, expected}) =
+          "unexpected " ^ encountered ^ ", expected " ^ expected
       | toString PREFIX_ZERO = "prefix 0 is disallowed"
       | toString INVALID_UNICODE_SCALAR = "invalid Unicode scalar"
       | toString INVALID_DATE = "invalid date"
       | toString INVALID_TIME = "invalid time"
-      | toString (DUPLICATE_KEY path) = "duplicate key at " ^ String.concatWith "." (List.map prettyKey path)
+      | toString (DUPLICATE_KEY path) =
+          "duplicate key at " ^ String.concatWith "." (List.map prettyKey path)
   end
   exception ParseError of error
 end

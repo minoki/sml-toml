@@ -15,10 +15,15 @@ jobs:
           gzip -d toml-test-v1.4.0-linux-amd64.gz
           mv toml-test-v1.4.0-linux-amd64 toml-test
           chmod +x toml-test
+          curl -Lo smlfmt.tar.gz https://github.com/shwestrick/smlfmt/archive/refs/tags/v1.1.0.tar.gz
+          tar xf smlfmt.tar.gz
+          make -C smlfmt-1.1.0
       - name: Type check
         run: make typecheck
       - name: Check type annotations
         run: docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --default-ann "valDescInComments error" toml.mlb
+      - name: smlfmt
+        run: smlfmt-1.1.0/smlfmt --check toml.mlb test/decoder.mlb
       - name: Test
         run: |
           make -C test decoder
