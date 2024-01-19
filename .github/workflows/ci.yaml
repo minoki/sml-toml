@@ -10,7 +10,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install mlton
-          docker pull ghcr.io/minoki/lunarml:latest
           curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
           gzip -d toml-test-v1.4.0-linux-amd64.gz
           mv toml-test-v1.4.0-linux-amd64 toml-test
@@ -18,13 +17,42 @@ jobs:
           curl -Lo smlfmt.tar.gz https://github.com/shwestrick/smlfmt/archive/refs/tags/v1.1.0.tar.gz
           tar xf smlfmt.tar.gz
           make -C smlfmt-1.1.0
-      - name: Type check
+      - name: Type check with MLton
         run: make typecheck
-      - name: Check type annotations
-        run: docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --default-ann "valDescInComments error" toml.mlb
       - name: smlfmt
         run: smlfmt-1.1.0/smlfmt --check toml.mlb test/decoder.mlb
-      - name: Test
+      - name: Test with MLton
         run: |
           make -C test decoder
           ./toml-test test/decoder
+  smlnj:
+    name: Build and test with SML/NJ
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install smlnj
+          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+          gzip -d toml-test-v1.4.0-linux-amd64.gz
+          mv toml-test-v1.4.0-linux-amd64 toml-test
+          chmod +x toml-test
+      - name: Type check with SML/NJ
+        run: |
+          echo 'OS.Process.exit (if CM.make "toml.cm" then OS.Process.success else OS.Process.failure) : unit;' | sml
+      - name: Test with SML/NJ
+        working-directory: test
+        run: |
+          ml-build decoder.cm Main.main decoder-smlnj
+          ../toml-test -- sml @SMLload=decoder-smlnj.amd64-linux
+  lunarml:
+    name: Check with LunarML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          docker pull ghcr.io/minoki/lunarml:latest
+      - name: Check type annotations with LunarML
+        run: docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --default-ann "valDescInComments error" toml.mlb

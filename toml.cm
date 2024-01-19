@@ -1,0 +1,19 @@
+Library
+    signature TOML_VALUE
+    structure TomlValue
+    signature PARSE_TOML
+    structure ParseToml
+    signature TOML_PARSE_ERROR
+    structure TomlParseError
+    signature TOML_VALUE_HANDLER
+    functor ParseToml
+    signature VALIDATE_UTF8
+    structure ValidateUtf8
+is
+    $/basis.cm
+    src/validate_utf8.sml
+    src/error.sml
+    src/value_handler.sig
+    src/parse_toml.sml
+    src/value.sig
+    src/value.sml

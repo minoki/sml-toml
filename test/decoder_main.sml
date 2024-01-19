@@ -1,0 +1,1 @@
+val () = Main.main ();
