@@ -11,10 +11,62 @@ struct
 end
 structure Common =
 struct
+  structure E = TomlParseError
   (* type pos = { line : int, column : int } (* 0-based line and 0-based column (in bytes) *) *)
   type path = string list
   type key = string list (* non-empty list *)
   fun digitToInt c = Char.ord c - Char.ord #"0"
+  (*: val revAppendUtf8 : word * char list -> char list *)
+  fun revAppendUtf8 (i, accum) =
+    if i < 0wx80 then (* 7-bit *)
+      Char.chr (Word.toInt i) :: accum
+    else if i < 0wx800 then (* 11-bit *)
+      let
+        val u0 = Word.orb (0wxC0, Word.>> (i, 0w6))
+        val u1 = Word.orb (0wx80, Word.andb (i, 0wx3F))
+      in
+        Char.chr (Word.toInt u1) :: Char.chr (Word.toInt u0) :: accum
+      end
+    else if i < 0wx10000 then (* 16-bit *)
+      if 0wxD800 <= i andalso i < 0wxE000 then
+        raise E.ParseError E.INVALID_UNICODE_SCALAR
+      else
+        let
+          val u0 = Word.orb (0wxE0, Word.>> (i, 0w12))
+          val u1 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w6), 0wx3F))
+          val u2 = Word.orb (0wx80, Word.andb (i, 0wx3F))
+        in
+          Char.chr (Word.toInt u2) :: Char.chr (Word.toInt u1)
+          :: Char.chr (Word.toInt u0) :: accum
+        end
+    else if i < 0wx110000 then (* 21-bit *)
+      let
+        val u0 = Word.orb (0wxF0, Word.>> (i, 0w18))
+        val u1 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w12), 0wx3F))
+        val u2 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w6), 0wx3F))
+        val u3 = Word.orb (0wx80, Word.andb (i, 0wx3F))
+      in
+        Char.chr (Word.toInt u3) :: Char.chr (Word.toInt u2)
+        :: Char.chr (Word.toInt u1) :: Char.chr (Word.toInt u0) :: accum
+      end
+    else
+      raise E.ParseError E.INVALID_UNICODE_SCALAR
+  fun isValidDate (_, 1, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (year, 2, 29) =
+        Int.rem (year, 4) = 0
+        andalso (Int.rem (year, 100) <> 0 orelse Int.rem (year, 400) = 0)
+    | isValidDate (_, 2, mday) = 1 <= mday andalso mday <= 28
+    | isValidDate (_, 3, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, 4, mday) = 1 <= mday andalso mday <= 30
+    | isValidDate (_, 5, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, 6, mday) = 1 <= mday andalso mday <= 30
+    | isValidDate (_, 7, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, 8, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, 9, mday) = 1 <= mday andalso mday <= 30
+    | isValidDate (_, 10, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, 11, mday) = 1 <= mday andalso mday <= 30
+    | isValidDate (_, 12, mday) = 1 <= mday andalso mday <= 31
+    | isValidDate (_, _, _) = false
 end
 signature PARSE_TOML =
 sig
@@ -32,7 +84,6 @@ struct
   val implodeRev = StringExt.implodeRev
   type value = Handler.value
   type table = Handler.table
-  structure E = TomlParseError
   fun UnexpectedEndOfInput expected =
     raise E.ParseError
       (E.UNEXPECTED {encountered = "end of input", expected = expected})
@@ -43,7 +94,8 @@ struct
     raise E.ParseError (E.DUPLICATE_KEY path)
   (*: val parse : (char, 'strm) StringCvt.reader -> 'strm -> table *)
   fun parse (getc: (char, 'strm) StringCvt.reader) =
-    let (*: val expect : char * 'strm -> 'strm *)
+    let
+      (*: val expect : char * 'strm -> 'strm *)
       fun expect (c, strm) =
         case getc strm of
           NONE => UnexpectedEndOfInput (Char.toString c)
@@ -131,41 +183,6 @@ struct
         in
           (((c3 * 16 + c2) * 16 + c1) * 16 + c0, strm)
         end
-      (*: val revAppendUtf8 : word * char list -> char list *)
-      fun revAppendUtf8 (i, accum) =
-        if i < 0wx80 then (* 7-bit *)
-          Char.chr (Word.toInt i) :: accum
-        else if i < 0wx800 then (* 11-bit *)
-          let
-            val u0 = Word.orb (0wxC0, Word.>> (i, 0w6))
-            val u1 = Word.orb (0wx80, Word.andb (i, 0wx3F))
-          in
-            Char.chr (Word.toInt u1) :: Char.chr (Word.toInt u0) :: accum
-          end
-        else if i < 0wx10000 then (* 16-bit *)
-          if 0wxD800 <= i andalso i < 0wxE000 then
-            raise E.ParseError E.INVALID_UNICODE_SCALAR
-          else
-            let
-              val u0 = Word.orb (0wxE0, Word.>> (i, 0w12))
-              val u1 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w6), 0wx3F))
-              val u2 = Word.orb (0wx80, Word.andb (i, 0wx3F))
-            in
-              Char.chr (Word.toInt u2) :: Char.chr (Word.toInt u1)
-              :: Char.chr (Word.toInt u0) :: accum
-            end
-        else if i < 0wx110000 then (* 21-bit *)
-          let
-            val u0 = Word.orb (0wxF0, Word.>> (i, 0w18))
-            val u1 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w12), 0wx3F))
-            val u2 = Word.orb (0wx80, Word.andb (Word.>> (i, 0w6), 0wx3F))
-            val u3 = Word.orb (0wx80, Word.andb (i, 0wx3F))
-          in
-            Char.chr (Word.toInt u3) :: Char.chr (Word.toInt u2)
-            :: Char.chr (Word.toInt u1) :: Char.chr (Word.toInt u0) :: accum
-          end
-        else
-          raise E.ParseError E.INVALID_UNICODE_SCALAR
       local
         fun go (accum, strm) =
           case getc strm of
@@ -641,22 +658,6 @@ struct
               , strm''
               ) (* local-date-time *)
         end
-      fun isValidDate (_, 1, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (year, 2, 29) =
-            Int.rem (year, 4) = 0
-            andalso (Int.rem (year, 100) <> 0 orelse Int.rem (year, 400) = 0)
-        | isValidDate (_, 2, mday) = 1 <= mday andalso mday <= 28
-        | isValidDate (_, 3, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, 4, mday) = 1 <= mday andalso mday <= 30
-        | isValidDate (_, 5, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, 6, mday) = 1 <= mday andalso mday <= 30
-        | isValidDate (_, 7, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, 8, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, 9, mday) = 1 <= mday andalso mday <= 30
-        | isValidDate (_, 10, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, 11, mday) = 1 <= mday andalso mday <= 30
-        | isValidDate (_, 12, mday) = 1 <= mday andalso mday <= 31
-        | isValidDate (_, _, _) = false
       (*: val readDate : char list * int * 'strm -> value * 'strm *)
       (* full-date: offset-date-time / local-date-time / local-date *)
       fun readDate (accum, year, strm) =
