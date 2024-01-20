@@ -28,17 +28,22 @@ jobs:
           test/utf8
   smlnj:
     name: Build and test with SML/NJ
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+    # runs-on: ubuntu-latest  # smlnj is a bit old
     steps:
       - uses: actions/checkout@v3
-      - name: Install dependencies
+      - name: Install dependencies (macOS)
         run: |
-          sudo apt-get update
-          sudo apt-get install smlnj
-          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
-          gzip -d toml-test-v1.4.0-linux-amd64.gz
-          mv toml-test-v1.4.0-linux-amd64 toml-test
-          chmod +x toml-test
+          brew update && brew install smlnj toml-test
+          echo "/usr/local/smlnj/bin" >> $GITHUB_PATH
+      # - name: Install dependencies (Ubuntu)
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install smlnj
+      #     curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+      #     gzip -d toml-test-v1.4.0-linux-amd64.gz
+      #     mv toml-test-v1.4.0-linux-amd64 toml-test
+      #     chmod +x toml-test
       - name: Type check with SML/NJ
         run: |
           echo 'OS.Process.exit (if CM.make "toml.cm" then OS.Process.success else OS.Process.failure) : unit;' | sml
@@ -46,7 +51,7 @@ jobs:
         working-directory: test
         run: |
           ml-build decoder.cm Main.main decoder-smlnj
-          ../toml-test -- sml @SMLload=decoder-smlnj
+          toml-test -- sml @SMLload=decoder-smlnj
           echo 'use "utf8.sml";' | sml
   smlsharp:
     name: Build and test with SML#
