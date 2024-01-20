@@ -1,4 +1,4 @@
-all: decoder
+all: decoder utf8
 .PHONY: all
 
 sources = \
@@ -12,3 +12,6 @@ sources = \
 
 decoder: decoder.mlb decoder.sml $(sources)
 	mlton -default-ann 'warnUnused true' decoder.mlb
+
+utf8: utf8.mlb utf8.sml $(sources)
+	mlton utf8.mlb

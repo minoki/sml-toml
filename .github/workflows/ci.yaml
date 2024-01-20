@@ -23,8 +23,9 @@ jobs:
         run: smlfmt-1.1.0/smlfmt --check toml.mlb test/decoder.mlb
       - name: Test with MLton
         run: |
-          make -C test decoder
+          make -C test decoder utf8
           ./toml-test test/decoder
+          test/utf8
   smlnj:
     name: Build and test with SML/NJ
     runs-on: ubuntu-latest
@@ -46,6 +47,7 @@ jobs:
         run: |
           ml-build decoder.cm Main.main decoder-smlnj
           ../toml-test -- sml @SMLload=decoder-smlnj.amd64-linux
+          echo 'use "utf8.sml";' | sml
   lunarml:
     name: Check with LunarML
     runs-on: ubuntu-latest
