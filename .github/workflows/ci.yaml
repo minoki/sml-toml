@@ -46,7 +46,7 @@ jobs:
         working-directory: test
         run: |
           ml-build decoder.cm Main.main decoder-smlnj
-          ../toml-test -- sml @SMLload=decoder-smlnj.amd64-linux
+          ../toml-test -- sml @SMLload=decoder-smlnj
           echo 'use "utf8.sml";' | sml
   lunarml:
     name: Check with LunarML
