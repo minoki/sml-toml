@@ -218,7 +218,7 @@ struct
                    end
                | SOME (c, _) => UnexpectedChar (c, "escape sequence"))
           | SOME (c, strm') =>
-              if (c < #" " andalso c <> #"\t") orelse c = #"\u007f" then
+              if (c < #" " andalso c <> #"\t") orelse c = #"\127" then
                 UnexpectedChar (c, "printable character")
               else
                 go (c :: accum, strm')
@@ -227,7 +227,7 @@ struct
         fun readBasicString strm = go ([], strm)
       end
       fun checkAllowedChar c =
-        if (c < #" " andalso c <> #"\t" andalso c <> #"\n") orelse c = #"\u007f" then
+        if (c < #" " andalso c <> #"\t" andalso c <> #"\n") orelse c = #"\127" then
           UnexpectedChar (c, "printable character")
         else
           c
@@ -321,7 +321,7 @@ struct
             NONE => UnexpectedEndOfInput "closing quote"
           | SOME (#"'", strm') => (implodeRev accum, strm')
           | SOME (c, strm') =>
-              if (c < #" " andalso c <> #"\t") orelse c = #"\u007f" then
+              if (c < #" " andalso c <> #"\t") orelse c = #"\127" then
                 UnexpectedChar (c, "printable character")
               else
                 go (c :: accum, strm')
