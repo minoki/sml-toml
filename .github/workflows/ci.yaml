@@ -17,7 +17,7 @@ jobs:
           curl -Lo smlfmt.tar.gz https://github.com/shwestrick/smlfmt/archive/refs/tags/v1.1.0.tar.gz
           tar xf smlfmt.tar.gz
           make -C smlfmt-1.1.0
-      - name: Type check with MLton
+      - name: Type check
         run: make typecheck
       - name: smlfmt
         run: smlfmt-1.1.0/smlfmt --check toml.mlb test/decoder.mlb
@@ -44,7 +44,7 @@ jobs:
       #     gzip -d toml-test-v1.4.0-linux-amd64.gz
       #     mv toml-test-v1.4.0-linux-amd64 toml-test
       #     chmod +x toml-test
-      - name: Type check with SML/NJ
+      - name: Type check
         run: |
           echo 'OS.Process.exit (if CM.make "toml.cm" then OS.Process.success else OS.Process.failure) : unit;' | sml
       - name: Test with SML/NJ
@@ -75,6 +75,32 @@ jobs:
           make -f Makefile.smlsharp
           ../toml-test ./decoder
           ./utf8
+  mlkit:
+    name: Build and test with MLKit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          curl -LO https://github.com/melsman/mlkit/releases/download/v4.7.8/mlkit-bin-dist-linux.tgz
+          tar xf mlkit-bin-dist-linux.tgz
+          sudo make -C mlkit-bin-dist-linux install
+          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+          gzip -d toml-test-v1.4.0-linux-amd64.gz
+          mv toml-test-v1.4.0-linux-amd64 toml-test
+          chmod +x toml-test
+      - name: Compile
+        run: make -f Makefile.mlkit
+        env:
+          SML_LIB: /usr/local/lib/mlkit
+      - name: Test
+        working-directory: test
+        run: |
+          make -f Makefile.mlkit decoder utf8
+          ../toml-test ./decoder
+          ./utf8
+        env:
+          SML_LIB: /usr/local/lib/mlkit
   lunarml:
     name: Check with LunarML
     runs-on: ubuntu-latest

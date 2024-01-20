@@ -2,4 +2,5 @@ test/decoder
 test/toml-test
 test/utf8
 .cm/
+MLB/
 *.o

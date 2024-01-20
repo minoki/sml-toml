@@ -7,6 +7,7 @@ _require "basis.smi"
 _require "./error.smi"
 _require "./value_handler.sig"
 _require "./parse_toml.sig"
+_require "./parse_toml_util.smi"
 functor ParseToml(Handler: sig
   type value
   type table

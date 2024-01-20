@@ -3,6 +3,7 @@ smlsharp = smlsharp
 objects = \
   src/validate_utf8.o \
   src/error.o \
+  src/parse_toml_util.o \
   src/parse_toml.o \
   src/value.o \
   src/parse_toml_default.o

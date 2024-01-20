@@ -1,0 +1,4 @@
+compile:
+	mlkit toml.mlb
+
+.PHONY: compile

@@ -1,24 +1,18 @@
 local
   $(SML_LIB)/basis/basis.mlb
-  src/validate_utf8.sig
-  src/validate_utf8.sml
-  src/error.sig
-  src/error.sml
-  src/value_handler.sig
-  src/parse_toml.sig
-  src/parse_toml.sml
-  src/value.sig
-  src/value.sml
-  src/parse_toml_default.sml
 in
-  signature TOML_VALUE
-  structure TomlValue
-  signature PARSE_TOML
-  structure ParseToml
-  signature TOML_PARSE_ERROR
-  structure TomlParseError
-  signature TOML_VALUE_HANDLER
-  functor ParseToml
-  signature VALIDATE_UTF8
-  structure ValidateUtf8
+  src/validate_utf8.sig (* signature VALIDATE_UTF8 *)
+  src/validate_utf8.sml (* structure ValidateUtf8 *)
+  src/error.sig (* signature TOML_PARSE_ERROR *)
+  src/error.sml (* structure TomlParseError *)
+  src/value_handler.sig (* signature TOML_VALUE_HANDLER *)
+  src/parse_toml.sig (* signature PARSE_TOML *)
+  local
+    src/parse_toml_util.sml (* structure ParseTomlUtil *)
+  in
+    src/parse_toml.sml (* functor ParseToml *)
+  end
+  src/value.sig (* signature TOML_VALUE *)
+  src/value.sml (* structure TomlValue *)
+  src/parse_toml_default.sml (* structure ParseToml *)
 end

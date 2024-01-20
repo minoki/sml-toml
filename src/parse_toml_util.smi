@@ -1,0 +1,16 @@
+(*
+ * Copyright (c) 2024 ARATA Mizuki
+ * This file is part of sml-toml.
+ * See LICENSE for copyright information.
+ *)
+_require "basis.smi"
+_require "error.smi"
+structure ParseTomlUtil =
+struct
+  val implodeRev: char list -> string
+  type path = string list
+  type key = string list (* non-empty list *)
+  val digitToInt: char -> int
+  val revAppendUtf8: word * char list -> char list
+  val isValidDate: int * int * int -> bool
+end

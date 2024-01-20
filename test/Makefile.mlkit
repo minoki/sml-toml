@@ -16,7 +16,7 @@ sources = \
   ../toml.mlb
 
 decoder: decoder.mlb decoder.sml $(sources)
-	mlton -default-ann 'warnUnused true' decoder.mlb
+	mlkit -o $@ decoder.mlb
 
 utf8: utf8.mlb utf8.sml $(sources)
-	mlton utf8.mlb
+	mlkit -o $@ utf8.mlb

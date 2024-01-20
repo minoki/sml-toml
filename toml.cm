@@ -17,6 +17,7 @@ is
     src/error.sml
     src/value_handler.sig
     src/parse_toml.sig
+    src/parse_toml_util.sml
     src/parse_toml.sml
     src/value.sig
     src/value.sml
