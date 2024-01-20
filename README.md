@@ -28,7 +28,7 @@ TOML value is expressed as `TomlValue.value`.
 signature TOML_VALUE = sig
   datatype value = STRING of string (* UTF-8 encoded *)
                  | INTEGER of IntInf.int
-                 | FLOAT of string (* underscores are stripped as parsed *)
+                 | FLOAT of real
                  | BOOL of bool
                  | DATETIME of string (* 2024-01-12T19:20:21[.123]+09:00 *)
                  | LOCAL_DATETIME of string (* 2024-01-12T19:20:21[.123] *)

@@ -3,6 +3,34 @@
  * This file is part of sml-toml.
  * See LICENSE for copyright information.
  *)
+structure CustomTomlValue =
+struct
+  datatype value =
+    STRING of string (* UTF-8 encoded *)
+  | INTEGER of IntInf.int
+  | FLOAT of string
+  | BOOL of bool
+  | DATETIME of string (* 2024-01-12T19:20:21[.123]+09:00 *)
+  | LOCAL_DATETIME of string (* 2024-01-12T19:20:21[.123] *)
+  | DATE of string (* 2024-01-12 *)
+  | TIME of string (* 19:20:21.99999 *)
+  | ARRAY of value list
+  | TABLE of table
+  withtype table = (string * value) list
+  structure Integer = IntInf
+  val string = STRING
+  val integer = INTEGER
+  val float = FLOAT
+  val bool = BOOL
+  val datetime = DATETIME
+  val localDatetime = LOCAL_DATETIME
+  val date = DATE
+  val time = TIME
+  val array = ARRAY
+  val subtable = TABLE
+  val table = fn xs => xs
+end
+structure CustomParseToml = ParseToml(CustomTomlValue)
 structure Main:
 sig
   val main: 'a -> 'b
@@ -27,29 +55,29 @@ struct
     ^
     String.concatWith ","
       (List.map (fn (k, v) => dumpString k ^ ":" ^ dumpValue v) table) ^ "}"
-  and dumpValue (TomlValue.STRING s) =
+  and dumpValue (CustomTomlValue.STRING s) =
         "{\"type\":\"string\",\"value\":" ^ dumpString s ^ "}"
-    | dumpValue (TomlValue.INTEGER i) =
+    | dumpValue (CustomTomlValue.INTEGER i) =
         "{\"type\":\"integer\",\"value\":\"" ^ intToString i ^ "\"}"
-    | dumpValue (TomlValue.FLOAT "+nan") =
+    | dumpValue (CustomTomlValue.FLOAT "+nan") =
         "{\"type\":\"float\",\"value\":\"nan\"}"
-    | dumpValue (TomlValue.FLOAT "-nan") =
+    | dumpValue (CustomTomlValue.FLOAT "-nan") =
         "{\"type\":\"float\",\"value\":\"nan\"}"
-    | dumpValue (TomlValue.FLOAT s) =
+    | dumpValue (CustomTomlValue.FLOAT s) =
         "{\"type\":\"float\",\"value\":\"" ^ s ^ "\"}"
-    | dumpValue (TomlValue.BOOL b) =
+    | dumpValue (CustomTomlValue.BOOL b) =
         "{\"type\":\"bool\",\"value\":\"" ^ Bool.toString b ^ "\"}"
-    | dumpValue (TomlValue.DATETIME dt) =
+    | dumpValue (CustomTomlValue.DATETIME dt) =
         "{\"type\":\"datetime\",\"value\":\"" ^ dt ^ "\"}"
-    | dumpValue (TomlValue.LOCAL_DATETIME dt) =
+    | dumpValue (CustomTomlValue.LOCAL_DATETIME dt) =
         "{\"type\":\"datetime-local\",\"value\":\"" ^ dt ^ "\"}"
-    | dumpValue (TomlValue.DATE d) =
+    | dumpValue (CustomTomlValue.DATE d) =
         "{\"type\":\"date-local\",\"value\":\"" ^ d ^ "\"}"
-    | dumpValue (TomlValue.TIME t) =
+    | dumpValue (CustomTomlValue.TIME t) =
         "{\"type\":\"time-local\",\"value\":\"" ^ t ^ "\"}"
-    | dumpValue (TomlValue.ARRAY xs) =
+    | dumpValue (CustomTomlValue.ARRAY xs) =
         "[" ^ String.concatWith "," (List.map dumpValue xs) ^ "]"
-    | dumpValue (TomlValue.TABLE table) = dumpTable table
+    | dumpValue (CustomTomlValue.TABLE table) = dumpTable table
   fun fail s =
     ( TextIO.output (TextIO.stdErr, s ^ "\n")
     ; OS.Process.exit OS.Process.failure
@@ -57,6 +85,10 @@ struct
   fun main _ =
     let
       val table =
+        CustomParseToml.parse
+          (ValidateUtf8.validatingReader TextIO.StreamIO.input1)
+          (ValidateUtf8.mkValidatingStream (TextIO.getInstream TextIO.stdIn))
+      val _ =
         ParseToml.parse (ValidateUtf8.validatingReader TextIO.StreamIO.input1)
           (ValidateUtf8.mkValidatingStream (TextIO.getInstream TextIO.stdIn))
     in
