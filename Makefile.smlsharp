@@ -1,0 +1,14 @@
+smlsharp = smlsharp
+
+objects = \
+  src/validate_utf8.o \
+  src/error.o \
+  src/parse_toml.o \
+  src/value.o \
+  src/parse_toml_default.o
+
+all: $(objects)
+.PHONY: all
+
+%.o: %.sml
+	$(smlsharp) -c -o $@ $<

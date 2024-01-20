@@ -11,9 +11,13 @@ Library
     structure ValidateUtf8
 is
     $/basis.cm
+    src/validate_utf8.sig
     src/validate_utf8.sml
+    src/error.sig
     src/error.sml
     src/value_handler.sig
+    src/parse_toml.sig
     src/parse_toml.sml
     src/value.sig
     src/value.sml
+    src/parse_toml_default.sml

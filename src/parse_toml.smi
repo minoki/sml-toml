@@ -1,0 +1,39 @@
+(*
+ * Copyright (c) 2024 ARATA Mizuki
+ * This file is part of sml-toml.
+ * See LICENSE for copyright information.
+ *)
+_require "basis.smi"
+_require "./error.smi"
+_require "./value_handler.sig"
+_require "./parse_toml.sig"
+functor ParseToml(Handler: sig
+  type value
+  type table
+  structure Integer:
+  sig
+    type int
+    val + : int * int -> int
+    val * : int * int -> int
+    val fromInt: Int.int -> int
+    val fromString: string -> int option
+  end
+  val string: string -> value
+  val integer: Integer.int -> value
+  val float: string -> value
+  val bool: bool -> value
+  val datetime: string -> value
+  val localDatetime: string -> value
+  val date: string -> value
+  val time: string -> value
+  val array: value list -> value
+  val subtable: table -> value
+  val table: (string * value) list -> table
+end
+) =
+struct
+  type value = Handler.value
+  type table = Handler.table
+  type path = string list
+  val parse: (char, 'strm) StringCvt.reader -> 'strm -> table
+end

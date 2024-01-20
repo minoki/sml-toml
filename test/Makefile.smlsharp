@@ -1,0 +1,13 @@
+all: decoder utf8
+.PHONY: all
+
+smlsharp = smlsharp
+
+decoder: decoder_main.sml decoder.o
+	$(smlsharp) -o $@ $<
+
+utf8: utf8.sml
+	$(smlsharp) -o $@ $<
+
+%.o: %.sml
+	$(smlsharp) -c -o $@ $<

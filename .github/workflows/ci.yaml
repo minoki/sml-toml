@@ -1,8 +1,8 @@
 on: [push, pull_request]
 name: ci
 jobs:
-  build-and-test:
-    name: build-and-test
+  mlton-and-smlfmt:
+    name: Build and test with MLton
     runs-on: ubuntu-20.04 # 22.04 doesn't contain mlton
     steps:
       - uses: actions/checkout@v3
@@ -48,6 +48,28 @@ jobs:
           ml-build decoder.cm Main.main decoder-smlnj
           ../toml-test -- sml @SMLload=decoder-smlnj
           echo 'use "utf8.sml";' | sml
+  smlsharp:
+    name: Build and test with SML#
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo add-apt-repository ppa:smlsharp/ppa
+          sudo apt-get update
+          sudo apt-get install smlsharp 
+          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+          gzip -d toml-test-v1.4.0-linux-amd64.gz
+          mv toml-test-v1.4.0-linux-amd64 toml-test
+          chmod +x toml-test
+      - name: Compile
+        run: make -f Makefile.smlsharp
+      - name: Test
+        working-directory: test
+        run: |
+          make -f Makefile.smlsharp
+          ../toml-test ./decoder
+          ./utf8
   lunarml:
     name: Check with LunarML
     runs-on: ubuntu-latest

@@ -30,4 +30,3 @@ struct
   val subtable = TABLE
   val table = fn xs => xs
 end
-structure ParseToml = ParseToml(TomlValue)

@@ -1,0 +1,6 @@
+_require "basis.smi"
+_require "../toml.smi"
+structure Main =
+struct
+  val main: 'a -> 'b
+end

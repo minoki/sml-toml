@@ -68,13 +68,6 @@ struct
     | isValidDate (_, 12, mday) = 1 <= mday andalso mday <= 31
     | isValidDate (_, _, _) = false
 end
-signature PARSE_TOML =
-sig
-  type value
-  type table
-  type path = string list
-  val parse: (char, 'strm) StringCvt.reader -> 'strm -> table
-end
 functor ParseToml(Handler: TOML_VALUE_HANDLER) :>
   PARSE_TOML
   where type value = Handler.value
