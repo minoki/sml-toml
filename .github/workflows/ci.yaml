@@ -21,7 +21,7 @@ jobs:
         run: make typecheck
       - name: smlfmt
         run: smlfmt-1.1.0/smlfmt --check toml.mlb test/decoder.mlb
-      - name: Test with MLton
+      - name: Test
         run: |
           make -C test decoder utf8
           ./toml-test test/decoder
@@ -47,7 +47,7 @@ jobs:
       - name: Type check
         run: |
           echo 'OS.Process.exit (if CM.make "toml.cm" then OS.Process.success else OS.Process.failure) : unit;' | sml
-      - name: Test with SML/NJ
+      - name: Test
         working-directory: test
         run: |
           ml-build decoder.cm Main.main decoder-smlnj
@@ -102,12 +102,22 @@ jobs:
         env:
           SML_LIB: /usr/local/lib/mlkit
   lunarml:
-    name: Check with LunarML
+    name: Build and test with LunarML
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
         run: |
           docker pull ghcr.io/minoki/lunarml:latest
-      - name: Check type annotations with LunarML
+          curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
+          gzip -d toml-test-v1.4.0-linux-amd64.gz
+          mv toml-test-v1.4.0-linux-amd64 toml-test
+          chmod +x toml-test
+      - name: Check type annotations
         run: docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --default-ann "valDescInComments error" toml.mlb
+      - name: Test
+        run: |
+          docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --nodejs-cps --default-ann "valDescInComments error" test/decoder.mlb
+          docker run --rm --platform linux/amd64 -v "$(pwd)":/work -w /work ghcr.io/minoki/lunarml:latest lunarml compile --nodejs-cps --default-ann "valDescInComments error" test/utf8.mlb
+          ./toml-test -- node test/decoder.mjs
+          node test/utf8.mjs
