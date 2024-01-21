@@ -52,7 +52,7 @@ jobs:
         run: |
           ml-build decoder.cm Main.main decoder-smlnj
           toml-test -- sml @SMLload=decoder-smlnj
-          echo 'use "utf8.sml";' | sml
+          echo 'OS.Process.exit (if CM.make "utf8.cm" then OS.Process.success else OS.Process.failure) : unit;' | sml
   smlsharp:
     name: Build and test with SML#
     runs-on: ubuntu-20.04
