@@ -4,8 +4,8 @@ This is a parser of [TOML v1.0.0](https://toml.io/en/v1.0.0) for Standard ML.
 
 ## Usage
 
-Currently, compilers compatible with MLB are supported.
-`toml.mlb` provides:
+Multiple compilers including SML/NJ, MLton, SML#, and LunarML are supported.
+`toml.mlb` and `toml.cm` and `toml.smi` provides:
 
 ```sml
 signature TOML_VALUE
