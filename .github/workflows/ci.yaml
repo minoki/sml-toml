@@ -101,6 +101,7 @@ jobs:
           ./utf8
         env:
           SML_LIB: /usr/local/lib/mlkit
+        continue-on-error: true # MLKit v4.7.8 has buggy Char.isCntrl and Real.fromString
   lunarml:
     name: Build and test with LunarML
     runs-on: ubuntu-latest
