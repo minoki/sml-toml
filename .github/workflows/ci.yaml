@@ -5,7 +5,7 @@ jobs:
     name: Build and test with MLton
     runs-on: ubuntu-20.04 # 22.04 doesn't contain mlton
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -31,7 +31,7 @@ jobs:
     runs-on: macos-latest
     # runs-on: ubuntu-latest  # smlnj is a bit old
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies (macOS)
         run: |
           brew update && brew install smlnj toml-test
@@ -57,7 +57,7 @@ jobs:
     name: Build and test with SML#
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo add-apt-repository ppa:smlsharp/ppa
@@ -79,7 +79,7 @@ jobs:
     name: Build and test with MLKit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           curl -LO https://github.com/melsman/mlkit/releases/download/v4.7.8/mlkit-bin-dist-linux.tgz
@@ -106,7 +106,7 @@ jobs:
     name: Build and test with LunarML
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           docker pull ghcr.io/minoki/lunarml:latest
