@@ -8,16 +8,13 @@ struct
   exception InvalidUtf8
   datatype state =
     START
-  | MID_1_OF_2
-  | MID_1_OF_3_E0
-  | MID_1_OF_3_ED
-  | MID_1_OF_3_OTHER
-  | MID_2_OF_3
-  | MID_1_OF_4_F0
-  | MID_1_OF_4_OTHER
-  | MID_1_OF_4_F4
-  | MID_2_OF_4
-  | MID_3_OF_4
+  | MID_1_OF_3_E0 (* -> 0xA0-0xBF 0x80-0xBF *)
+  | MID_1_OF_3_ED (* -> 0x80-0x9F 0x80-0xBF *)
+  | MID_1_OF_4_F0 (* -> 0x90-0xBF 0x80-0xBF 0x80-0xBF *)
+  | MID_1_OF_4_F4 (* -> 0x80-0x8F 0x80-0xBF 0x80-0xBF *)
+  | TAIL_1 (* -> 0x80-0xBF *)
+  | TAIL_2 (* -> 0x80-0xBF 0x80-0xBF *)
+  | TAIL_3 (* -> 0x80-0xBF 0x80-0xBF 0x80-0xBF *)
   type 'strm validating_stream = 'strm * state
   fun mkValidatingStream strm = (strm, START)
   (*
@@ -30,68 +27,41 @@ struct
         if c < #"\128" (* 0x80 *) then
           START
         else if c < #"\224" (* 0xE0 *) then
-          if #"\194" (* 0xC2 *) <= c then MID_1_OF_2 else raise InvalidUtf8
+          if #"\194" (* 0xC2 *) <= c then TAIL_1 else raise InvalidUtf8
         else if c = #"\224" (* 0xE0 *) then
           MID_1_OF_3_E0
         else if c = #"\237" (* 0xED *) then
           MID_1_OF_3_ED
         else if c < #"\240" (* 0xF0 *) then
-          MID_1_OF_3_OTHER
+          TAIL_2
         else if c = #"\240" (* 0xF0 *) then
           MID_1_OF_4_F0
         else if c < #"\244" (* 0xF4 *) then
-          MID_1_OF_4_OTHER
+          TAIL_3
         else if c = #"\244" (* 0xF4 *) then
           MID_1_OF_4_F4
         else
           raise InvalidUtf8
-    | nextState (MID_1_OF_2, c1) =
+    | nextState (TAIL_1, c1) =
         if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then START
         else raise InvalidUtf8
     | nextState (MID_1_OF_3_E0, c1) =
-        if
-          #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *)
-          andalso #"\160" (* 0xA0 *) <= c1
-        then MID_2_OF_3
+        if #"\160" (* 0xA0 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then TAIL_1
         else raise InvalidUtf8
     | nextState (MID_1_OF_3_ED, c1) =
-        if
-          #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *)
-          andalso c1 < #"\160" (* 0xA0 *)
-        then MID_2_OF_3
+        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\160" (* 0xA0 *) then TAIL_1
         else raise InvalidUtf8
-    | nextState (MID_1_OF_3_OTHER, c1) =
-        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then
-          MID_2_OF_3
-        else
-          raise InvalidUtf8
-    | nextState (MID_2_OF_3, c2) =
-        if #"\128" (* 0x80 *) <= c2 andalso c2 < #"\192" (* 0xC0 *) then START
+    | nextState (TAIL_2, c1) =
+        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then TAIL_1
         else raise InvalidUtf8
     | nextState (MID_1_OF_4_F0, c1) =
-        if
-          #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *)
-          andalso #"\144" (* 0x90 *) <= c1
-        then MID_2_OF_4
+        if #"\144" (* 0x90 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then TAIL_2
         else raise InvalidUtf8
-    | nextState (MID_1_OF_4_OTHER, c1) =
-        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then
-          MID_2_OF_4
-        else
-          raise InvalidUtf8
+    | nextState (TAIL_3, c1) =
+        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *) then TAIL_2
+        else raise InvalidUtf8
     | nextState (MID_1_OF_4_F4, c1) =
-        if
-          #"\128" (* 0x80 *) <= c1 andalso c1 < #"\192" (* 0xC0 *)
-          andalso c1 < #"\144" (* 0x90 *)
-        then MID_2_OF_4
-        else raise InvalidUtf8
-    | nextState (MID_2_OF_4, c2) =
-        if #"\128" (* 0x80 *) <= c2 andalso c2 < #"\192" (* 0xC0 *) then
-          MID_3_OF_4
-        else
-          raise InvalidUtf8
-    | nextState (MID_3_OF_4, c3) =
-        if #"\128" (* 0x80 *) <= c3 andalso c3 < #"\192" (* 0xC0 *) then START
+        if #"\128" (* 0x80 *) <= c1 andalso c1 < #"\144" (* 0x90 *) then TAIL_2
         else raise InvalidUtf8
   fun go (START, NONE) = NONE
     | go (_, NONE) = raise InvalidUtf8
