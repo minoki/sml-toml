@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          curl -LO https://github.com/melsman/mlkit/releases/download/v4.7.8/mlkit-bin-dist-linux.tgz
+          curl -LO https://github.com/melsman/mlkit/releases/download/v4.7.9/mlkit-bin-dist-linux.tgz
           tar xf mlkit-bin-dist-linux.tgz
           sudo make -C mlkit-bin-dist-linux install
           curl -LO https://github.com/toml-lang/toml-test/releases/download/v1.4.0/toml-test-v1.4.0-linux-amd64.gz
@@ -101,7 +101,6 @@ jobs:
           ./utf8
         env:
           SML_LIB: /usr/local/lib/mlkit
-        continue-on-error: true # MLKit v4.7.8 has buggy Char.isCntrl and Real.fromString
   lunarml:
     name: Build and test with LunarML
     runs-on: ubuntu-latest
