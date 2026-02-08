@@ -1,0 +1,22 @@
+all: decoder utf8
+.PHONY: all utf8
+
+sources = \
+  ../src/validate_utf8.sig \
+  ../src/validate_utf8.sml \
+  ../src/error.sig \
+  ../src/error.sml \
+  ../src/value_handler.sig \
+  ../src/parse_toml.sig \
+  ../src/parse_toml_util.sml \
+  ../src/parse_toml.sml \
+  ../src/value.sig \
+  ../src/value.sml \
+  ../src/parse_toml_default.sml \
+  ../toml.mlb
+
+decoder: poly-decoder.ML decoder.sml $(sources)
+	polyc -o $@ $<
+
+utf8: poly-utf8.ML utf8.sml $(sources)
+	poly < $<
